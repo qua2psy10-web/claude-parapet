@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>重力式 河川パラペット 設計計算書 作成ツール</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="app-header no-print">
+    <h1>重力式 河川パラペット 設計計算書 作成ツール</h1>
+    <div class="toolbar">
+      <button id="btnCalc" class="btn primary">計算 / プレビュー更新</button>
+      <button id="btnPrint" class="btn">PDF出力（印刷）</button>
+      <button id="btnSave" class="btn">入力を保存</button>
+      <button id="btnLoad" class="btn">入力を読込</button>
+      <button id="btnReset" class="btn">初期値に戻す</button>
+      <input type="file" id="fileLoad" accept="application/json" hidden />
+    </div>
+  </header>
+
+  <div class="layout">
+    <!-- 入力パネル（Excelライク） -->
+    <section id="inputPanel" class="input-panel no-print">
+      <div class="tabs">
+        <button class="tab active" data-tab="t-cond">設計条件</button>
+        <button class="tab" data-tab="t-shape">形状</button>
+        <button class="tab" data-tab="t-load">荷重状態</button>
+      </div>
+      <div id="t-cond" class="tabpane active"></div>
+      <div id="t-shape" class="tabpane"></div>
+      <div id="t-load" class="tabpane"></div>
+    </section>
+
+    <!-- 出力プレビュー -->
+    <section id="report" class="report"></section>
+  </div>
+
+  <script src="js/defaults.js"></script>
+  <script src="js/calc.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

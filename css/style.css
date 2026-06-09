@@ -1,0 +1,121 @@
+/* ===== 画面 UI ===== */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Yu Gothic", "Meiryo", "MS PGothic", sans-serif;
+  color: #1a1a1a;
+  background: #eceff1;
+}
+.app-header {
+  background: #1f3a5f; color: #fff; padding: 10px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 8px;
+}
+.app-header h1 { font-size: 16px; margin: 0; }
+.toolbar { display: flex; gap: 6px; flex-wrap: wrap; }
+.btn {
+  background: #fff; border: 1px solid #b0bec5; border-radius: 4px;
+  padding: 6px 12px; cursor: pointer; font-size: 13px;
+}
+.btn:hover { background: #f0f4f8; }
+.btn.primary { background: #2e7d32; color: #fff; border-color: #2e7d32; }
+.btn.primary:hover { background: #256628; }
+
+.layout { display: flex; gap: 0; align-items: stretch; }
+.input-panel {
+  width: 420px; min-width: 360px; background: #fff;
+  border-right: 1px solid #cfd8dc; height: calc(100vh - 52px);
+  overflow-y: auto; padding: 0;
+}
+.tabs { display: flex; border-bottom: 1px solid #cfd8dc; position: sticky; top: 0; background: #fff; z-index: 2; }
+.tab {
+  flex: 1; padding: 10px; border: none; background: #eceff1;
+  cursor: pointer; font-size: 13px; border-right: 1px solid #cfd8dc;
+}
+.tab.active { background: #fff; font-weight: bold; border-bottom: 2px solid #2e7d32; }
+.tabpane { display: none; padding: 12px; }
+.tabpane.active { display: block; }
+
+.input-panel h3 {
+  font-size: 13px; margin: 16px 0 6px; color: #1f3a5f;
+  border-left: 4px solid #2e7d32; padding-left: 6px;
+}
+.input-panel h3:first-child { margin-top: 0; }
+
+/* Excelライク入力グリッド */
+table.grid { border-collapse: collapse; width: 100%; font-size: 12px; }
+table.grid th, table.grid td { border: 1px solid #cfd8dc; padding: 3px 5px; }
+table.grid th {
+  background: #f0f4f8; text-align: left; font-weight: normal;
+  color: #37474f; white-space: nowrap;
+}
+table.grid td.unit { color: #78909c; width: 48px; text-align: center; }
+table.grid input, table.grid select {
+  width: 100%; border: none; padding: 3px; font-size: 12px;
+  background: #fffde7; text-align: right;
+}
+table.grid input:focus, table.grid select:focus { outline: 2px solid #2e7d32; background: #fff; }
+table.grid input[type=text] { text-align: left; }
+table.grid input[type=checkbox] { width: auto; }
+
+/* 荷重状態カード */
+.lc-card { border: 1px solid #cfd8dc; border-radius: 4px; margin-bottom: 10px; }
+.lc-card .lc-head { background: #1f3a5f; color: #fff; padding: 5px 8px; font-size: 13px; }
+.lc-card .lc-body { padding: 8px; }
+
+/* ===== 出力レポート（PDF見本様式） ===== */
+.report {
+  flex: 1; background: #eceff1; padding: 20px; overflow-y: auto;
+  height: calc(100vh - 52px);
+}
+.sheet {
+  background: #fff; width: 210mm; min-height: 297mm; margin: 0 auto 16px;
+  padding: 18mm 16mm; box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  font-size: 10.5pt; line-height: 1.5; color: #000;
+}
+.sheet .doc-title { text-align: center; font-size: 18pt; font-weight: bold; margin: 30mm 0 8mm; }
+.sheet .doc-subtitle { text-align: center; font-size: 13pt; margin-bottom: 60mm; }
+.sheet .doc-meta { width: 70%; margin: 0 auto; font-size: 11pt; }
+.sheet .doc-meta td { padding: 4px 8px; border-bottom: 1px solid #888; }
+
+.sheet h2 {
+  font-size: 13pt; margin: 14px 0 8px; padding: 4px 8px;
+  background: #d7e3f0; border-left: 5px solid #1f3a5f;
+}
+.sheet h3 { font-size: 11.5pt; margin: 12px 0 5px; border-bottom: 1px solid #1f3a5f; }
+.sheet h4 { font-size: 10.5pt; margin: 8px 0 4px; }
+.sheet p { margin: 4px 0; }
+
+table.rep { border-collapse: collapse; width: 100%; margin: 6px 0; font-size: 9.5pt; }
+table.rep th, table.rep td { border: 1px solid #555; padding: 3px 6px; text-align: center; }
+table.rep th { background: #e8eef5; }
+table.rep td.l { text-align: left; }
+table.rep td.r { text-align: right; }
+.ok { color: #1b5e20; font-weight: bold; }
+.ng { color: #c62828; font-weight: bold; }
+
+.formula { font-family: "Cambria Math", serif; background: #f7f9fb; padding: 4px 8px; margin: 4px 0; border-left: 3px solid #90a4ae; font-size: 10pt; }
+.note { font-size: 9pt; color: #555; }
+
+.fig { text-align: center; margin: 10px 0; }
+.fig svg { border: 1px solid #ccc; background: #fafafa; }
+.fig figcaption { font-size: 9pt; color: #555; margin-top: 3px; }
+
+.judge-banner { padding: 8px; text-align: center; font-size: 12pt; font-weight: bold; border: 2px solid; margin: 8px 0; }
+.judge-banner.ok { border-color: #1b5e20; background: #e8f5e9; color: #1b5e20; }
+.judge-banner.ng { border-color: #c62828; background: #ffebee; color: #c62828; }
+
+/* ===== 印刷 ===== */
+@media print {
+  @page { size: A4; margin: 0; }
+  body { background: #fff; }
+  .no-print { display: none !important; }
+  .layout { display: block; }
+  .report { padding: 0; height: auto; overflow: visible; background: #fff; }
+  .sheet {
+    box-shadow: none; margin: 0; width: 210mm; min-height: 297mm;
+    page-break-after: always;
+  }
+  .sheet:last-child { page-break-after: auto; }
+  table.rep { font-size: 9pt; }
+}
