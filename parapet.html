@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>重力式 河川パラペット 設計計算書 作成ツール</title>
+  <style>
+/* ===== 画面 UI ===== */
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  font-family: "Yu Gothic", "Meiryo", "MS PGothic", sans-serif;
+  color: #1a1a1a;
+  background: #eceff1;
+}
+.app-header {
+  background: #1f3a5f; color: #fff; padding: 10px 16px;
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 8px;
+}
+.app-header h1 { font-size: 16px; margin: 0; }
+.toolbar { display: flex; gap: 6px; flex-wrap: wrap; }
+.btn {
+  background: #fff; border: 1px solid #b0bec5; border-radius: 4px;
+  padding: 6px 12px; cursor: pointer; font-size: 13px;
+}
+.btn:hover { background: #f0f4f8; }
+.btn.primary { background: #2e7d32; color: #fff; border-color: #2e7d32; }
+.btn.primary:hover { background: #256628; }
+
+.layout { display: flex; gap: 0; align-items: stretch; }
+.input-panel {
+  width: 420px; min-width: 360px; background: #fff;
+  border-right: 1px solid #cfd8dc; height: calc(100vh - 52px);
+  overflow-y: auto; padding: 0;
+}
+.tabs { display: flex; border-bottom: 1px solid #cfd8dc; position: sticky; top: 0; background: #fff; z-index: 2; }
+.tab {
+  flex: 1; padding: 10px; border: none; background: #eceff1;
+  cursor: pointer; font-size: 13px; border-right: 1px solid #cfd8dc;
+}
+.tab.active { background: #fff; font-weight: bold; border-bottom: 2px solid #2e7d32; }
+.tabpane { display: none; padding: 12px; }
+.tabpane.active { display: block; }
+
+.input-panel h3 {
+  font-size: 13px; margin: 16px 0 6px; color: #1f3a5f;
+  border-left: 4px solid #2e7d32; padding-left: 6px;
+}
+.input-panel h3:first-child { margin-top: 0; }
+
+/* Excelライク入力グリッド */
+table.grid { border-collapse: collapse; width: 100%; font-size: 12px; }
+table.grid th, table.grid td { border: 1px solid #cfd8dc; padding: 3px 5px; }
+table.grid th {
+  background: #f0f4f8; text-align: left; font-weight: normal;
+  color: #37474f; white-space: nowrap;
+}
+table.grid td.unit { color: #78909c; width: 48px; text-align: center; }
+table.grid input, table.grid select {
+  width: 100%; border: none; padding: 3px; font-size: 12px;
+  background: #fffde7; text-align: right;
+}
+table.grid input:focus, table.grid select:focus { outline: 2px solid #2e7d32; background: #fff; }
+table.grid input[type=text] { text-align: left; }
+table.grid input[type=checkbox] { width: auto; }
+
+/* 荷重状態カード */
+.lc-card { border: 1px solid #cfd8dc; border-radius: 4px; margin-bottom: 10px; }
+.lc-card .lc-head { background: #1f3a5f; color: #fff; padding: 5px 8px; font-size: 13px; }
+.lc-card .lc-body { padding: 8px; }
+
+/* ===== 出力レポート（PDF見本様式） ===== */
+.report {
+  flex: 1; background: #eceff1; padding: 20px; overflow-y: auto;
+  height: calc(100vh - 52px);
+}
+.sheet {
+  background: #fff; width: 210mm; min-height: 297mm; margin: 0 auto 16px;
+  padding: 18mm 16mm; box-shadow: 0 2px 8px rgba(0,0,0,.2);
+  font-size: 10.5pt; line-height: 1.5; color: #000;
+}
+.sheet .doc-title { text-align: center; font-size: 18pt; font-weight: bold; margin: 30mm 0 8mm; }
+.sheet .doc-subtitle { text-align: center; font-size: 13pt; margin-bottom: 60mm; }
+.sheet .doc-meta { width: 70%; margin: 0 auto; font-size: 11pt; }
+.sheet .doc-meta td { padding: 4px 8px; border-bottom: 1px solid #888; }
+
+.sheet h2 {
+  font-size: 13pt; margin: 14px 0 8px; padding: 4px 8px;
+  background: #d7e3f0; border-left: 5px solid #1f3a5f;
+}
+.sheet h3 { font-size: 11.5pt; margin: 12px 0 5px; border-bottom: 1px solid #1f3a5f; }
+.sheet h4 { font-size: 10.5pt; margin: 8px 0 4px; }
+.sheet p { margin: 4px 0; }
+
+table.rep { border-collapse: collapse; width: 100%; margin: 6px 0; font-size: 9.5pt; }
+table.rep th, table.rep td { border: 1px solid #555; padding: 3px 6px; text-align: center; }
+table.rep th { background: #e8eef5; }
+table.rep td.l { text-align: left; }
+table.rep td.r { text-align: right; }
+.ok { color: #1b5e20; font-weight: bold; }
+.ng { color: #c62828; font-weight: bold; }
+
+.formula { font-family: "Cambria Math", serif; background: #f7f9fb; padding: 4px 8px; margin: 4px 0; border-left: 3px solid #90a4ae; font-size: 10pt; }
+.note { font-size: 9pt; color: #555; }
+
+.fig { text-align: center; margin: 10px 0; }
+.fig svg { border: 1px solid #ccc; background: #fafafa; }
+.fig figcaption { font-size: 9pt; color: #555; margin-top: 3px; }
+
+.judge-banner { padding: 8px; text-align: center; font-size: 12pt; font-weight: bold; border: 2px solid; margin: 8px 0; }
+.judge-banner.ok { border-color: #1b5e20; background: #e8f5e9; color: #1b5e20; }
+.judge-banner.ng { border-color: #c62828; background: #ffebee; color: #c62828; }
+
+/* ===== 印刷 ===== */
+@media print {
+  @page { size: A4; margin: 0; }
+  body { background: #fff; }
+  .no-print { display: none !important; }
+  .layout { display: block; }
+  .report { padding: 0; height: auto; overflow: visible; background: #fff; }
+  .sheet {
+    box-shadow: none; margin: 0; width: 210mm; min-height: 297mm;
+    page-break-after: always;
+  }
+  .sheet:last-child { page-break-after: auto; }
+  table.rep { font-size: 9pt; }
+}
+  </style>
+</head>
+<body>
+  <header class="app-header no-print">
+    <h1>重力式 河川パラペット 設計計算書 作成ツール</h1>
+    <div class="toolbar">
+      <button id="btnCalc" class="btn primary">計算 / プレビュー更新</button>
+      <button id="btnPrint" class="btn">PDF出力（印刷）</button>
+      <button id="btnSave" class="btn">入力を保存</button>
+      <button id="btnLoad" class="btn">入力を読込</button>
+      <button id="btnReset" class="btn">初期値に戻す</button>
+      <input type="file" id="fileLoad" accept="application/json" hidden />
+    </div>
+  </header>
+
+  <div class="layout">
+    <section id="inputPanel" class="input-panel no-print">
+      <div class="tabs">
+        <button class="tab active" data-tab="t-cond">設計条件</button>
+        <button class="tab" data-tab="t-shape">形状</button>
+        <button class="tab" data-tab="t-load">荷重状態</button>
+      </div>
+      <div id="t-cond" class="tabpane active"></div>
+      <div id="t-shape" class="tabpane"></div>
+      <div id="t-load" class="tabpane"></div>
+    </section>
+
+    <section id="report" class="report"></section>
+  </div>
+
+  <script>
+/* 既定の設計データ（重力式 河川パラペット）
+ * 値は見本(L型)の条件を重力式向けに置き換えた初期値 */
+window.DEFAULT_INPUT = {
+  project: {
+    title: "河川パラペット設計計算書",
+    subtitle: "重力式擁壁（直接基礎）",
+    standard: "道路土工 擁壁工指針（平成24年7月, 日本道路協会）",
+    formType: "重力式－B（直接基礎）",
+    blockLength: 10.0, // ブロック長 (m)
+    date: "",
+    designer: "",
+  },
+  shape: {
+    H1: 0.730,     // 壁高(フーチング上面〜天端) m
+    bTop: 0.200,   // 天端幅 m
+    bBottom: 0.450,// 壁底厚 m
+    nFront: 0.00,  // 前面勾配(1:n)
+    nBack: 0.20,   // 背面勾配(1:n)
+    toe: 0.150,    // 前趾長 m
+    heel: 0.300,   // 後趾長 m
+    tf: 0.120,     // フーチング厚 m
+  },
+  material: {
+    gammaC: 24.500, // 躯体 kN/m3
+    gammaW: 9.800,  // 水 kN/m3
+    sigmaCk: 18.0,  // コンクリート設計基準強度 N/mm2(無筋)
+  },
+  soil: {
+    phi: 30.0,       // 内部摩擦角 度
+    gammaWet: 19.000,// 湿潤重量 kN/m3
+    gammaSat: 19.800,// 飽和重量 kN/m3
+    type: "砂質土",
+  },
+  seismic: {
+    khBody: 0.16,
+    khSoil: 0.16,
+    kv: 0.00,
+    level: "レベル2", region: "A", ground: "I種",
+  },
+  found: {
+    mu: 0.600,  // 摩擦係数 tanφB
+    CB: 0.000,  // 付着力 kN/m2
+  },
+  water: {
+    frontLevel: 0.850, // 前面水位 m
+    backLevel: 0.000,  // 背面水位 m
+  },
+  collision: {
+    type: "たわみ性防護柵",
+    p: 30.000,   // 衝突荷重 kN
+    pv: 25.000,  // 前輪鉛直荷重 kN
+    lambda: 1.000, // 載荷距離 m
+    h: 0.000,    // 作用高さ(天端から) m
+    x: 0.060,    // 鉛直荷重作用位置(前面から) m
+  },
+  loadCases: [
+    { name: "常時1", seismic: false, surcharge: 10.0, surchargeFrom: null,
+      eaRatio: 1/6, FsAllow: 1.5, qAllow: 300, sigmaCa: 6.0,
+      tauA: 0.39, sigmaTa: 0.40, deltaConst: 0, collision: false, water: false },
+    { name: "常時2", seismic: false, surcharge: 10.0, surchargeFrom: 0.78,
+      eaRatio: 1/6, FsAllow: 1.5, qAllow: 300, sigmaCa: 6.0,
+      tauA: 0.39, sigmaTa: 0.40, deltaConst: 0, collision: false, water: false },
+    { name: "地震時", seismic: true, surcharge: 0.0, surchargeFrom: null,
+      eaRatio: 1/3, FsAllow: 1.2, qAllow: 450, sigmaCa: 9.0,
+      tauA: 0.59, sigmaTa: 0.60, collision: false, water: false },
+    { name: "衝突時", seismic: false, surcharge: 0.0, surchargeFrom: null,
+      eaRatio: 1/3, FsAllow: 1.2, qAllow: 450, sigmaCa: 9.0,
+      tauA: 0.59, sigmaTa: 0.60, deltaConst: 0, collision: true, water: false },
+    { name: "満水時", seismic: false, surcharge: 0.0, surchargeFrom: null,
+      eaRatio: 1/6, FsAllow: 1.5, qAllow: 300, sigmaCa: 6.0,
+      tauA: 0.39, sigmaTa: 0.40, deltaConst: 0, collision: false, water: true },
+  ],
+};
+  </script>
+  <script>
+/* ============================================================
+ * 重力式 河川パラペット（重力式擁壁）設計計算エンジン
+ *   準拠: 道路土工 擁壁工指針（平成24年7月, 日本道路協会）の考え方
+ *   ・安定計算 : 転倒（偏心量）・滑動（安全率）・支持（地盤反力）
+ *   ・土圧     : 試行くさび法（常時／地震時、地震時δ自動算定）
+ *   ・断面照査 : 重力式（無筋）合応力点の圧縮・引張応力度照査
+ *  注) 本エンジンは標準的な算定式に基づく実用計算であり、
+ *      個別ソフトの数値を完全一致させるものではない。
+ * ========================================================== */
+(function (global) {
+  "use strict";
+
+  const DEG = Math.PI / 180;
+  const r2 = (x) => Math.round(x * 1000) / 1000; // 表示丸め用ではなく内部はそのまま
+
+  /* ---- 多角形の面積・図心（shoelace, 反時計回り正） ---- */
+  function polyAreaCentroid(pts) {
+    let A = 0, Cx = 0, Cy = 0;
+    const n = pts.length;
+    for (let i = 0; i < n; i++) {
+      const [x0, y0] = pts[i];
+      const [x1, y1] = pts[(i + 1) % n];
+      const cross = x0 * y1 - x1 * y0;
+      A += cross;
+      Cx += (x0 + x1) * cross;
+      Cy += (y0 + y1) * cross;
+    }
+    A /= 2;
+    if (Math.abs(A) < 1e-12) return { area: 0, cx: 0, cy: 0 };
+    Cx /= 6 * A;
+    Cy /= 6 * A;
+    return { area: Math.abs(A), cx: Cx, cy: Cy };
+  }
+
+  /* =========================================================
+   * 形状の構築
+   * 座標系: 原点=フーチング前面下端, x=背面方向(+), y=上方向(+)
+   * ========================================================= */
+  function buildGeometry(I) {
+    const { H1, bTop, bBottom, toe, heel, tf } = I.shape;
+    const B = toe + bBottom + heel; // 底版幅
+    const xf0 = toe;                // 壁底前端
+    const xb0 = toe + bBottom;      // 壁底背端
+    // 前面・背面勾配 (1:n, 上に行くほど x が変化)
+    const nf = I.shape.nFront;      // 前面勾配(前傾を正としx増)
+    const nb = I.shape.nBack;       // 背面勾配(後退を正としx減)
+    const xfTop = xf0 + nf * H1;
+    const xbTop = xb0 - nb * H1;
+
+    // 本体（台形）
+    const body = [
+      [xf0, tf],
+      [xbTop, tf + H1],
+      [xfTop, tf + H1],
+      // 上記2点の順序を頂点が交差しないよう調整
+    ];
+    // 正しい頂点順（反時計）: 前面下→前面上→背面上→背面下
+    const bodyPts = [
+      [xf0, tf],
+      [xfTop, tf + H1],
+      [xbTop, tf + H1],
+      [xb0, tf],
+    ];
+    // フーチング（矩形）
+    const footPts = [
+      [0, 0], [B, 0], [B, tf], [0, tf],
+    ];
+    // 背面土砂（壁背面より後方〜底版背端, 地表=壁天端レベル）
+    const Hg = tf + H1; // 地表面高さ
+    const backSoilPts = [
+      [xb0, tf],
+      [xbTop, tf + H1],
+      [B, Hg],
+      [B, tf],
+    ];
+
+    return { B, xf0, xb0, xfTop, xbTop, tf, H1, Hg, bBottom,
+             bodyPts, footPts, backSoilPts };
+  }
+
+  /* =========================================================
+   * 試行くさび法による主働土圧
+   *   仮想背面: かかと端 x=B から鉛直, 高さ H(=Hg)
+   *   常時 : P = W·sin(ω-φ)/cos(ω-φ-α-δ)
+   *   地震 : 合震度角 θ を考慮し δ を自動算定
+   * 戻り: { P, Ph, Pv, y(作用高さ,底版下端から), omega, delta }
+   * ========================================================= */
+  function trialWedge(G, soil, q, seismic) {
+    const H = G.Hg;                  // 仮想背面高さ
+    const phi = soil.phi * DEG;
+    const gamma = soil.gamma;
+    const alpha = 0;                 // 仮想背面が鉛直となす角(=0)
+    const kh = seismic ? soil.kh : 0;
+    const kv = seismic ? (soil.kv || 0) : 0;
+
+    // 地震合震度角
+    const theta = Math.atan(kh / (1 - kv));
+    let delta;
+    if (seismic) {
+      // 地震時 壁面摩擦角の自動算定
+      const sphi = Math.sin(phi);
+      const sinDelta = Math.sin(theta) / sphi;
+      const Delta = Math.asin(Math.min(1, Math.max(-1, sinDelta)));
+      const num = sphi * Math.sin(theta + Delta);
+      const den = 1 - sphi * Math.cos(theta + Delta);
+      delta = Math.atan2(num, den);
+    } else {
+      delta = (soil.deltaConst || 0) * DEG;
+    }
+
+    let best = { P: -Infinity };
+    for (let wDeg = soil.phi + 0.1; wDeg < 89.9; wDeg += 0.1) {
+      const w = wDeg * DEG;
+      // くさび: 仮想背面(高さH,鉛直) と すべり面(底端から角度w) と 地表(水平)
+      const base = H / Math.tan(w);          // 地表での水平距離
+      if (base <= 0) continue;
+      const areaSoil = 0.5 * H * base;       // 土塊断面積
+      const Wsoil = gamma * areaSoil;        // 土塊自重(/m)
+      const Wq = q * base;                   // 上載荷重ぶん
+      const W = Wsoil + Wq;
+      // 地震時は合力を θ 回転（等価重力法）
+      const We = (W) * (1 - kv);
+      // クーロン試行くさび（α=0, 地表水平）
+      const denom = Math.cos(w - phi - alpha - delta + theta);
+      if (Math.abs(denom) < 1e-6) continue;
+      const P = We * Math.sin(w - phi) / denom;
+      if (P > best.P) best = { P, omega: wDeg, W };
+    }
+    const P = Math.max(0, best.P);
+    // 作用方向: 仮想背面法線(水平)から δ 下向き
+    const Ph = P * Math.cos(delta);
+    const Pv = P * Math.sin(delta);
+    const y = H / 3; // 三角形分布の作用高さ（底版下端から）
+    return { P, Ph, Pv, y, omega: best.omega || 0, delta: delta / DEG, theta: theta / DEG };
+  }
+
+  /* =========================================================
+   * 水圧・浮力（満水時）
+   * ========================================================= */
+  function waterForces(G, w, water) {
+    // 前面静水圧（前面水位 Ff）, 背面静水圧（背面水位 Fr）
+    const gw = w.gammaW;
+    const Ff = water.frontLevel, Fr = water.backLevel;
+    const PwF = 0.5 * gw * Ff * Ff;   // 前面水圧合力(水平, 前面→背面を負方向に押す)
+    const PwR = 0.5 * gw * Fr * Fr;   // 背面水圧合力
+    const yF = Ff / 3, yR = Fr / 3;
+    // 揚圧力（浮力相当）: 底面に作用、前面水位Ff〜背面Frの台形分布
+    const pf = gw * Ff;
+    const pr = gw * Fr;
+    const U = 0.5 * (pf + pr) * G.B; // /m
+    const xU = G.B * (pf + 2 * pr) / (3 * (pf + pr || 1)); // 前面からの作用位置
+    return { PwF, PwR, yF, yR, U, xU, pf, pr };
+  }
+
+  /* =========================================================
+   * 1つの荷重状態の安定計算
+   * ========================================================= */
+  function stabilityCase(I, G, lc) {
+    const seismic = lc.seismic;
+    const w = I.material;
+    const soil = {
+      phi: I.soil.phi, gamma: I.soil.gammaWet,
+      kh: I.seismic.khSoil, kv: I.seismic.kv || 0,
+      deltaConst: lc.deltaConst != null ? lc.deltaConst : 0,
+    };
+
+    // --- 鉛直力 V と モーメント(フーチング前面まわり) ---
+    let V = 0, Mr = 0, Mt = 0; // Mr:抵抗(前面まわり時計回り), Mt:転倒
+    let Hsum = 0, Mh = 0;      // 水平力とそのモーメント
+
+    // 自重（本体＋フーチング）
+    const body = polyAreaCentroid(G.bodyPts);
+    const foot = polyAreaCentroid(G.footPts);
+    const Wbody = w.gammaC * body.area;
+    const Wfoot = w.gammaC * foot.area;
+    V += Wbody + Wfoot;
+    Mr += Wbody * body.cx + Wfoot * foot.cx;
+    if (seismic) {
+      const Hb = (Wbody + Wfoot) * I.seismic.khBody;
+      Hsum += Hb;
+      Mh += Wbody * I.seismic.khBody * body.cy + Wfoot * I.seismic.khBody * foot.cy;
+    }
+
+    // 背面土砂自重
+    const bs = polyAreaCentroid(G.backSoilPts);
+    const Wsoil = I.soil.gammaWet * bs.area;
+    V += Wsoil;
+    Mr += Wsoil * bs.cx;
+    if (seismic) {
+      const Hs = Wsoil * I.seismic.khSoil;
+      Hsum += Hs;
+      Mh += Hs * bs.cy;
+    }
+
+    // 上載荷重（背面土砂上面に作用）
+    if (lc.surcharge > 0) {
+      const x0 = lc.surchargeFrom != null ? lc.surchargeFrom : G.xb0;
+      const x1 = G.B;
+      const wq = lc.surcharge * (x1 - x0);
+      const xq = (x0 + x1) / 2;
+      V += wq;
+      Mr += wq * xq;
+    }
+
+    // 主働土圧（仮想背面=かかと端）
+    const q = lc.surcharge || 0;
+    const ep = trialWedge(G, soil, q, seismic);
+    Hsum += ep.Ph;
+    Mh += ep.Ph * ep.y;
+    V += ep.Pv;
+    Mr += ep.Pv * G.B; // 鉛直土圧成分は仮想背面(x=B)に作用
+
+    // 衝突荷重（安定計算: 有効幅=ブロック長 → 単位幅当りに換算）
+    if (lc.collision) {
+      const c = I.collision;
+      const L = I.project.blockLength || 1;
+      const Pu = c.p / L;            // 単位幅水平力
+      const Pv = c.pv / L;           // 単位幅鉛直力
+      Hsum += Pu;
+      Mh += Pu * (G.Hg + c.h);       // 天端より h 上に作用
+      V += Pv;
+      Mr += Pv * c.x;                // 作用位置x(前面から)
+    }
+
+    // 水圧・浮力（満水時）
+    let water = null;
+    if (lc.water) {
+      water = waterForces(G, w, { frontLevel: I.water.frontLevel, backLevel: I.water.backLevel, gammaW: w.gammaW });
+      // 前面水圧は背面→前面方向（抵抗側, 水平力を減じる）
+      Hsum += -water.PwF + water.PwR;
+      Mh += -water.PwF * water.yF + water.PwR * water.yR;
+      // 揚圧力（上向き, V を減じ, 前面まわりにモーメント）
+      V -= water.U;
+      Mr -= water.U * water.xU;
+    }
+
+    // 水平力による転倒モーメント
+    Mt += Mh;
+
+    // --- 安定照査 ---
+    const B = G.B;
+    const d = (Mr - Mt) / V;       // 合力作用位置(前面から)
+    const e = B / 2 - d;           // 偏心量
+    const eaRatio = lc.eaRatio;    // 許容偏心比 (1/6 or 1/3)
+    const ea = B * eaRatio;
+    const overturnOK = Math.abs(e) <= ea + 1e-9;
+
+    // 滑動
+    const mu = I.found.mu, CB = I.found.CB;
+    const Bp = B - 2 * Math.abs(e);
+    const Fs = (V * mu + CB * Math.max(0, Bp)) / Math.abs(Hsum);
+    const FsOK = Fs >= lc.FsAllow - 1e-9;
+
+    // 支持（地盤反力）
+    let q1, q2, qmax, width, shape;
+    if (Math.abs(e) <= B / 6 + 1e-9) {
+      q1 = V / B * (1 + 6 * e / B); // 前面側
+      q2 = V / B * (1 - 6 * e / B); // 背面側
+      qmax = Math.max(q1, q2);
+      width = B; shape = "台形";
+    } else {
+      // 三角形分布
+      const a = B / 2 - Math.abs(e);
+      qmax = 2 * V / (3 * a);
+      q1 = qmax; q2 = 0;
+      width = 3 * a; shape = "三角形";
+    }
+    const bearingOK = qmax <= lc.qAllow + 1e-9;
+
+    return {
+      name: lc.name,
+      V, H: Hsum, Mr, Mt, d, e, ea, eaRatio,
+      overturnOK, mu, CB, Bp, Fs, FsAllow: lc.FsAllow, FsOK,
+      q1, q2, qmax, qAllow: lc.qAllow, width, shape, bearingOK,
+      ep, water, B,
+      Mcenter: V * B / 2 - (Mr - Mt), // 参考: 中心まわりモーメント
+    };
+  }
+
+  /* =========================================================
+   * 断面照査（重力式・無筋）: 壁基部水平断面
+   * ========================================================= */
+  function sectionCase(I, G, lc) {
+    const seismic = lc.seismic;
+    const w = I.material;
+    const soil = {
+      phi: I.soil.phi, gamma: I.soil.gammaWet,
+      kh: I.seismic.khSoil, kv: I.seismic.kv || 0,
+      deltaConst: lc.deltaConst != null ? lc.deltaConst : 0,
+    };
+    // 壁基部より上の本体のみ
+    const bodyUpper = polyAreaCentroid(G.bodyPts);
+    const Wb = w.gammaC * bodyUpper.area;
+    const xb = bodyUpper.cx;        // 図心x
+    const yb = bodyUpper.cy;        // 図心y
+    const yBase = G.tf;             // 断面位置
+
+    // 断面諸量（壁底厚 bBottom, 単位奥行1m）
+    const b = G.bBottom;
+    const A = b * 1.0;
+    const Z = 1.0 * b * b / 6;
+
+    let N = Wb, H = 0, Mbase = 0;
+    // 土圧（壁背面に作用, 高さ H1 部分のみ近似: 仮想背面=壁背端鉛直, 高さ H1+? ）
+    // 簡略化: 壁高さ H1 に対する試行くさび
+    const Gwall = Object.assign({}, G, { Hg: G.H1 });
+    const ep = trialWedge(Gwall, soil, lc.surcharge || 0, seismic);
+    H += ep.Ph;
+    Mbase += ep.Ph * ep.y;
+    N += ep.Pv;
+
+    if (seismic) {
+      const Hb = Wb * I.seismic.khBody;
+      H += Hb;
+      Mbase += Hb * (yb - yBase);
+    }
+
+    // 衝突荷重（竪壁設計: 有効幅考慮）
+    if (lc.collision) {
+      const c = I.collision;
+      const Pu = c.p / (c.lambda + G.H1); // 有効幅 λ+壁高
+      H += Pu;
+      Mbase += Pu * (G.H1 + c.h);
+    }
+
+    // 水圧（満水時, 前面側のみ壁前面に作用→抵抗）
+    if (lc.water) {
+      const gw = w.gammaW;
+      const hf = Math.min(I.water.frontLevel, G.H1);
+      const Pw = 0.5 * gw * hf * hf;
+      H += -Pw;
+      Mbase += -Pw * (hf / 3);
+    }
+
+    // 断面下端まわりの偏心
+    const e = Mbase / N; // 断面中心からの偏心(土圧側を正)
+    // 合応力点での縁応力度 [kN/m²] → [N/mm²] (×1e-3)
+    const UNIT = 1e-3;
+    const sigmaC = (N / A + Math.abs(Mbase) / Z) * UNIT; // 圧縮側(前面)
+    const sigmaT = (N / A - Math.abs(Mbase) / Z) * UNIT; // 背面側(負なら引張)
+    const ecc = Math.abs(Mbase) / N;
+    const compOK = sigmaC <= lc.sigmaCa + 1e-9;
+    const tension = sigmaT < 0 ? -sigmaT : 0;
+    const tensionOK = tension <= (lc.sigmaTa || 0) + 1e-9;
+
+    // せん断
+    const tau = Math.abs(H) / (A * 1000) ; // N/mm2 ※ A[m2]→簡易
+    const tauMm = Math.abs(H) * 1000 / (b * 1000 * 1.0 * 1000); // kN→N, m→mm
+    const shearOK = tauMm <= lc.tauA + 1e-9;
+
+    return {
+      name: lc.name, N, H, M: Mbase, e: ecc, b, A, Z,
+      sigmaC, sigmaT, sigmaCa: lc.sigmaCa, sigmaTa: lc.sigmaTa || 0,
+      tension, compOK, tensionOK,
+      tau: tauMm, tauA: lc.tauA, shearOK,
+      ep,
+    };
+  }
+
+  /* =========================================================
+   * 全体計算
+   * ========================================================= */
+  function calculate(I) {
+    const G = buildGeometry(I);
+    const stability = I.loadCases.map((lc) => stabilityCase(I, G, lc));
+    const section = I.loadCases.map((lc) => sectionCase(I, G, lc));
+    const allOK =
+      stability.every((s) => s.overturnOK && s.FsOK && s.bearingOK) &&
+      section.every((s) => s.compOK && s.tensionOK && s.shearOK);
+    return { geometry: G, stability, section, allOK };
+  }
+
+  global.ParapetCalc = { calculate, buildGeometry, polyAreaCentroid, trialWedge };
+})(typeof window !== "undefined" ? window : globalThis);
+  </script>
+  <script>
+/* ============================================================
+ * UI 構築・計算・レポート生成（見本様式）
+ * ========================================================== */
+(function () {
+  "use strict";
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+  const LS_KEY = "parapet_input_v1";
+
+  let I = deepClone(window.DEFAULT_INPUT);
+
+  /* ---------- 数値整形 ---------- */
+  const f3 = (x) => (x == null || isNaN(x)) ? "—" : Number(x).toFixed(3);
+  const f2 = (x) => (x == null || isNaN(x)) ? "—" : Number(x).toFixed(2);
+  const f1 = (x) => (x == null || isNaN(x)) ? "—" : Number(x).toFixed(1);
+  const judge = (ok) => ok ? '<span class="ok">○</span>' : '<span class="ng">×</span>';
+  function deepClone(o) { return JSON.parse(JSON.stringify(o)); }
+
+  /* ========================================================
+   * 入力フォーム生成
+   * ====================================================== */
+  function rows(defs) {
+    // defs: [{label, path, unit, type, options}]
+    return defs.map((d) => {
+      let cell;
+      const val = getPath(I, d.path);
+      if (d.type === "select") {
+        cell = `<select data-path="${d.path}">` +
+          d.options.map((o) => `<option ${o == val ? "selected" : ""}>${o}</option>`).join("") +
+          `</select>`;
+      } else if (d.type === "text") {
+        cell = `<input type="text" data-path="${d.path}" value="${val ?? ""}">`;
+      } else if (d.type === "checkbox") {
+        cell = `<input type="checkbox" data-path="${d.path}" ${val ? "checked" : ""}>`;
+      } else {
+        cell = `<input type="number" step="${d.step || "any"}" data-path="${d.path}" value="${val ?? ""}">`;
+      }
+      return `<tr><th>${d.label}</th><td>${cell}</td><td class="unit">${d.unit || ""}</td></tr>`;
+    }).join("");
+  }
+  function grid(defs) { return `<table class="grid">${rows(defs)}</table>`; }
+
+  function buildCond() {
+    const html = `
+      <h3>工事情報</h3>
+      ${grid([
+        { label: "表題", path: "project.title", type: "text" },
+        { label: "副題", path: "project.subtitle", type: "text" },
+        { label: "適用基準", path: "project.standard", type: "text" },
+        { label: "形式", path: "project.formType", type: "text" },
+        { label: "ブロック長 B", path: "project.blockLength", unit: "m" },
+        { label: "設計年月日", path: "project.date", type: "text" },
+        { label: "設計者", path: "project.designer", type: "text" },
+      ])}
+      <h3>使用材料</h3>
+      ${grid([
+        { label: "躯体単位体積重量 γc", path: "material.gammaC", unit: "kN/m³" },
+        { label: "水単位体積重量 γw", path: "material.gammaW", unit: "kN/m³" },
+        { label: "コンクリート σck", path: "material.sigmaCk", unit: "N/mm²" },
+      ])}
+      <h3>土質条件</h3>
+      ${grid([
+        { label: "土質種別", path: "soil.type", type: "select", options: ["砂質土", "粘性土", "礫質土"] },
+        { label: "内部摩擦角 φ", path: "soil.phi", unit: "度" },
+        { label: "湿潤重量 γt", path: "soil.gammaWet", unit: "kN/m³" },
+        { label: "飽和重量 γsat", path: "soil.gammaSat", unit: "kN/m³" },
+      ])}
+      <h3>地震条件</h3>
+      ${grid([
+        { label: "地震規模", path: "seismic.level", type: "select", options: ["レベル1", "レベル2"] },
+        { label: "地域区分", path: "seismic.region", type: "select", options: ["A", "B", "C"] },
+        { label: "地盤種別", path: "seismic.ground", type: "select", options: ["I種", "II種", "III種"] },
+        { label: "設計水平震度 躯体 Kh", path: "seismic.khBody" },
+        { label: "設計水平震度 土砂 Kh", path: "seismic.khSoil" },
+        { label: "鉛直震度 Kv", path: "seismic.kv" },
+      ])}
+      <h3>基礎条件</h3>
+      ${grid([
+        { label: "摩擦係数 tanφB", path: "found.mu" },
+        { label: "付着力 CB", path: "found.CB", unit: "kN/m²" },
+      ])}
+      <h3>水位</h3>
+      ${grid([
+        { label: "前面水位 Ff", path: "water.frontLevel", unit: "m" },
+        { label: "背面水位 Fr", path: "water.backLevel", unit: "m" },
+      ])}
+      <h3>衝突荷重（防護柵）</h3>
+      ${grid([
+        { label: "防護柵の種類", path: "collision.type", type: "text" },
+        { label: "衝突荷重 P", path: "collision.p", unit: "kN" },
+        { label: "前輪荷重 pv", path: "collision.pv", unit: "kN" },
+        { label: "載荷距離 λ", path: "collision.lambda", unit: "m" },
+        { label: "作用高さ h(天端から)", path: "collision.h", unit: "m" },
+        { label: "鉛直荷重位置 x(前面から)", path: "collision.x", unit: "m" },
+      ])}`;
+    $("#t-cond").innerHTML = html;
+  }
+
+  function buildShape() {
+    $("#t-shape").innerHTML = `
+      <h3>断面寸法（重力式）</h3>
+      ${grid([
+        { label: "壁高 H1(底版上面〜天端)", path: "shape.H1", unit: "m" },
+        { label: "天端幅 b_top", path: "shape.bTop", unit: "m" },
+        { label: "壁底厚 b_bottom", path: "shape.bBottom", unit: "m" },
+        { label: "前面勾配 nFront(1:n)", path: "shape.nFront" },
+        { label: "背面勾配 nBack(1:n)", path: "shape.nBack" },
+        { label: "前趾長 toe", path: "shape.toe", unit: "m" },
+        { label: "後趾長 heel", path: "shape.heel", unit: "m" },
+        { label: "フーチング厚 tf", path: "shape.tf", unit: "m" },
+      ])}
+      <p class="note">底版幅 B = toe + b_bottom + heel。背面勾配は上方ほど前面側へ後退する量。</p>
+      <div id="shapePreview"></div>`;
+    drawShapePreview();
+  }
+
+  function buildLoad() {
+    const html = I.loadCases.map((lc, i) => `
+      <div class="lc-card">
+        <div class="lc-head">荷重状態 ${i + 1}: ${lc.name}</div>
+        <div class="lc-body">
+          ${grid([
+            { label: "名称", path: `loadCases.${i}.name`, type: "text" },
+            { label: "地震時", path: `loadCases.${i}.seismic`, type: "checkbox" },
+            { label: "衝突荷重", path: `loadCases.${i}.collision`, type: "checkbox" },
+            { label: "満水(水圧浮力)", path: `loadCases.${i}.water`, type: "checkbox" },
+            { label: "上載荷重 q", path: `loadCases.${i}.surcharge`, unit: "kN/m²" },
+            { label: "上載開始位置(空=全面)", path: `loadCases.${i}.surchargeFrom`, unit: "m" },
+            { label: "許容偏心比 ea/B", path: `loadCases.${i}.eaRatio` },
+            { label: "許容滑動安全率 Fsa", path: `loadCases.${i}.FsAllow` },
+            { label: "許容支持力 qa", path: `loadCases.${i}.qAllow`, unit: "kN/m²" },
+            { label: "許容圧縮応力 σca", path: `loadCases.${i}.sigmaCa`, unit: "N/mm²" },
+            { label: "許容引張応力 σta", path: `loadCases.${i}.sigmaTa`, unit: "N/mm²" },
+            { label: "許容せん断 τa", path: `loadCases.${i}.tauA`, unit: "N/mm²" },
+          ])}
+        </div>
+      </div>`).join("");
+    $("#t-load").innerHTML = html;
+  }
+
+  /* ---------- path get/set ---------- */
+  function getPath(obj, path) {
+    return path.split(".").reduce((o, k) => (o == null ? o : o[k]), obj);
+  }
+  function setPath(obj, path, val) {
+    const ks = path.split(".");
+    const last = ks.pop();
+    const t = ks.reduce((o, k) => o[k], obj);
+    t[last] = val;
+  }
+
+  /* ---------- 入力イベント ---------- */
+  function bindInputs() {
+    $("#inputPanel").addEventListener("input", (e) => {
+      const el = e.target;
+      const path = el.dataset.path;
+      if (!path) return;
+      let v;
+      if (el.type === "checkbox") v = el.checked;
+      else if (el.type === "number") v = el.value === "" ? null : parseFloat(el.value);
+      else v = el.value;
+      setPath(I, path, v);
+      if (path.startsWith("shape.")) drawShapePreview();
+      scheduleCalc();
+    });
+  }
+
+  let calcTimer = null;
+  function scheduleCalc() {
+    clearTimeout(calcTimer);
+    calcTimer = setTimeout(runCalc, 250);
+  }
+
+  /* ========================================================
+   * 断面図 SVG
+   * ====================================================== */
+  function sectionSVG(G, w, h, label) {
+    const pad = 28;
+    const B = G.B, Htot = G.Hg;
+    const sx = (w - 2 * pad) / B;
+    const sy = (h - 2 * pad) / Htot;
+    const s = Math.min(sx, sy);
+    const ox = pad, oy = h - pad;
+    const X = (x) => ox + x * s;
+    const Y = (y) => oy - y * s;
+    const poly = (pts, fill, stroke) =>
+      `<polygon points="${pts.map(([x, y]) => `${X(x).toFixed(1)},${Y(y).toFixed(1)}`).join(" ")}" fill="${fill}" stroke="${stroke}" stroke-width="1"/>`;
+    let svg = `<svg width="${w}" height="${h}" viewBox="0 0 ${w} ${h}">`;
+    // 地盤線
+    svg += `<line x1="0" y1="${Y(0).toFixed(1)}" x2="${w}" y2="${Y(0).toFixed(1)}" stroke="#8d6e63" stroke-width="1.5"/>`;
+    // 背面土砂
+    svg += poly(G.backSoilPts, "#fff3e0", "#bcaaa4");
+    // フーチング・本体
+    svg += poly(G.footPts, "#cfd8dc", "#37474f");
+    svg += poly(G.bodyPts, "#b0bec5", "#263238");
+    // 寸法線(底版幅)
+    svg += `<line x1="${X(0)}" y1="${Y(-0.05)}" x2="${X(B)}" y2="${Y(-0.05)}" stroke="#1565c0" stroke-width="0.8" marker-start="url(#a)" marker-end="url(#a)"/>`;
+    svg += `<text x="${X(B / 2)}" y="${Y(-0.05) + 14}" font-size="10" text-anchor="middle" fill="#1565c0">B=${B.toFixed(3)}m</text>`;
+    if (label) svg += `<text x="${w / 2}" y="14" font-size="11" text-anchor="middle" fill="#333">${label}</text>`;
+    svg += `</svg>`;
+    return svg;
+  }
+
+  function drawShapePreview() {
+    try {
+      const G = ParapetCalc.buildGeometry(I);
+      $("#shapePreview").innerHTML =
+        `<div class="fig">${sectionSVG(G, 360, 300, "断面プレビュー")}</div>`;
+    } catch (e) { /* ignore */ }
+  }
+
+  /* ========================================================
+   * レポート生成（見本様式）
+   * ====================================================== */
+  function runCalc() {
+    let R;
+    try { R = ParapetCalc.calculate(I); }
+    catch (err) { $("#report").innerHTML = `<div class="sheet"><p class="ng">計算エラー: ${err.message}</p></div>`; return; }
+    renderReport(R);
+  }
+
+  function renderReport(R) {
+    const G = R.geometry;
+    const p = I.project;
+    const sheets = [];
+
+    /* --- 表紙 --- */
+    sheets.push(`<div class="sheet">
+      <div class="doc-title">${esc(p.title)}</div>
+      <div class="doc-subtitle">${esc(p.subtitle)}</div>
+      <table class="doc-meta">
+        <tr><td>適用基準</td><td>${esc(p.standard)}</td></tr>
+        <tr><td>形式</td><td>${esc(p.formType)}</td></tr>
+        <tr><td>ブロック長</td><td>${f3(p.blockLength)} m</td></tr>
+        <tr><td>設計年月日</td><td>${esc(p.date || "")}</td></tr>
+        <tr><td>設計者</td><td>${esc(p.designer || "")}</td></tr>
+      </table>
+      <div style="margin-top:40mm" class="fig">${sectionSVG(G, 440, 340, "標準断面図")}
+        <figcaption>標準断面図（単位:m）</figcaption></div>
+    </div>`);
+
+    /* --- 1. 設計条件 --- */
+    sheets.push(`<div class="sheet">
+      <h2>1. 設計条件</h2>
+      <h3>1.1 適用基準・形式</h3>
+      <table class="rep"><tbody>
+        <tr><th>適用基準</th><td class="l">${esc(p.standard)}</td></tr>
+        <tr><th>形式</th><td class="l">${esc(p.formType)}</td></tr>
+        <tr><th>ブロック長 B</th><td class="l">${f3(p.blockLength)} m</td></tr>
+      </tbody></table>
+
+      <h3>1.2 形状寸法</h3>
+      <table class="rep"><tbody>
+        <tr><th>壁高 H1</th><td>${f3(I.shape.H1)} m</td><th>天端幅</th><td>${f3(I.shape.bTop)} m</td></tr>
+        <tr><th>壁底厚</th><td>${f3(I.shape.bBottom)} m</td><th>フーチング厚 tf</th><td>${f3(I.shape.tf)} m</td></tr>
+        <tr><th>前趾長 toe</th><td>${f3(I.shape.toe)} m</td><th>後趾長 heel</th><td>${f3(I.shape.heel)} m</td></tr>
+        <tr><th>前面勾配</th><td>1:${f2(I.shape.nFront)}</td><th>背面勾配</th><td>1:${f2(I.shape.nBack)}</td></tr>
+        <tr><th>底版幅 B</th><td colspan="3">${f3(G.B)} m</td></tr>
+      </tbody></table>
+
+      <h3>1.3 使用材料・土質</h3>
+      <table class="rep"><tbody>
+        <tr><th>躯体 γc</th><td>${f3(I.material.gammaC)} kN/m³</td><th>水 γw</th><td>${f3(I.material.gammaW)} kN/m³</td></tr>
+        <tr><th>コンクリート σck</th><td>${f1(I.material.sigmaCk)} N/mm²</td><th>土質</th><td>${esc(I.soil.type)}</td></tr>
+        <tr><th>内部摩擦角 φ</th><td>${f2(I.soil.phi)} 度</td><th>湿潤重量 γt</th><td>${f3(I.soil.gammaWet)} kN/m³</td></tr>
+      </tbody></table>
+
+      <h3>1.4 地震・基礎・水位条件</h3>
+      <table class="rep"><tbody>
+        <tr><th>地震規模</th><td>${esc(I.seismic.level)}</td><th>地域区分</th><td>${esc(I.seismic.region)}</td><th>地盤種別</th><td>${esc(I.seismic.ground)}</td></tr>
+        <tr><th>水平震度 躯体</th><td>${f2(I.seismic.khBody)}</td><th>水平震度 土砂</th><td>${f2(I.seismic.khSoil)}</td><th>鉛直震度</th><td>${f2(I.seismic.kv)}</td></tr>
+        <tr><th>摩擦係数 tanφB</th><td>${f3(I.found.mu)}</td><th>付着力 CB</th><td>${f3(I.found.CB)} kN/m²</td><th>—</th><td>—</td></tr>
+        <tr><th>前面水位 Ff</th><td>${f3(I.water.frontLevel)} m</td><th>背面水位 Fr</th><td>${f3(I.water.backLevel)} m</td><th>—</th><td>—</td></tr>
+      </tbody></table>
+
+      <h3>1.5 荷重組み合わせ</h3>
+      <table class="rep">
+        <thead><tr><th>No</th><th>荷重状態</th><th>地震</th><th>衝突</th><th>満水</th><th>上載 q(kN/m²)</th><th>照査項目</th></tr></thead>
+        <tbody>${I.loadCases.map((lc, i) => `<tr>
+          <td>${i + 1}</td><td>${esc(lc.name)}</td>
+          <td>${lc.seismic ? "○" : "—"}</td><td>${lc.collision ? "○" : "—"}</td><td>${lc.water ? "○" : "—"}</td>
+          <td>${f1(lc.surcharge)}</td><td>安定・断面</td></tr>`).join("")}</tbody>
+      </table>
+    </div>`);
+
+    /* --- 2. 結果一覧 --- */
+    sheets.push(`<div class="sheet">
+      <h2>2. 結果一覧</h2>
+      <div class="judge-banner ${R.allOK ? "ok" : "ng"}">総合判定: ${R.allOK ? "○ 全照査を満足" : "× 照査を満足しない項目あり"}</div>
+
+      <h3>2.1 安定計算</h3>
+      <h4>(1) 転倒に対する照査</h4>
+      <table class="rep">
+        <thead><tr><th>荷重状態</th><th>ΣV(kN)</th><th>合力位置 d(m)</th><th>偏心 e(m)</th><th>許容 ea(m)</th><th>判定</th></tr></thead>
+        <tbody>${R.stability.map((s) => `<tr>
+          <td>${esc(s.name)}</td><td>${f3(s.V)}</td><td>${f3(s.d)}</td><td>${f3(s.e)}</td>
+          <td>≦ ${f3(s.ea)}</td><td>${judge(s.overturnOK)}</td></tr>`).join("")}</tbody>
+      </table>
+
+      <h4>(2) 滑動に対する照査</h4>
+      <table class="rep">
+        <thead><tr><th>荷重状態</th><th>ΣV(kN)</th><th>ΣH(kN)</th><th>Fs</th><th>許容 Fsa</th><th>判定</th></tr></thead>
+        <tbody>${R.stability.map((s) => `<tr>
+          <td>${esc(s.name)}</td><td>${f3(s.V)}</td><td>${f3(s.H)}</td><td>${f3(s.Fs)}</td>
+          <td>≧ ${f3(s.FsAllow)}</td><td>${judge(s.FsOK)}</td></tr>`).join("")}</tbody>
+      </table>
+
+      <h4>(3) 支持に対する照査</h4>
+      <table class="rep">
+        <thead><tr><th>荷重状態</th><th>分布形</th><th>反力幅(m)</th><th>qmax(kN/m²)</th><th>許容(kN/m²)</th><th>判定</th></tr></thead>
+        <tbody>${R.stability.map((s) => `<tr>
+          <td>${esc(s.name)}</td><td>${s.shape}</td><td>${f3(s.width)}</td><td>${f3(s.qmax)}</td>
+          <td>≦ ${f3(s.qAllow)}</td><td>${judge(s.bearingOK)}</td></tr>`).join("")}</tbody>
+      </table>
+
+      <h3>2.2 断面計算（重力式・合応力点）</h3>
+      <h4>(1) 圧縮・引張応力度</h4>
+      <table class="rep">
+        <thead><tr><th>荷重状態</th><th>N(kN)</th><th>M(kN·m)</th><th>σc(N/mm²)</th><th>許容σca</th><th>σt(N/mm²)</th><th>判定</th></tr></thead>
+        <tbody>${R.section.map((s) => `<tr>
+          <td>${esc(s.name)}</td><td>${f3(s.N)}</td><td>${f3(s.M)}</td>
+          <td>${f3(s.sigmaC)}</td><td>≦ ${f3(s.sigmaCa)}</td>
+          <td>${f3(s.tension)}</td><td>${judge(s.compOK && s.tensionOK)}</td></tr>`).join("")}</tbody>
+      </table>
+      <h4>(2) せん断応力度</h4>
+      <table class="rep">
+        <thead><tr><th>荷重状態</th><th>H(kN)</th><th>τ(N/mm²)</th><th>許容τa</th><th>判定</th></tr></thead>
+        <tbody>${R.section.map((s) => `<tr>
+          <td>${esc(s.name)}</td><td>${f3(s.H)}</td><td>${f3(s.tau)}</td>
+          <td>≦ ${f3(s.tauA)}</td><td>${judge(s.shearOK)}</td></tr>`).join("")}</tbody>
+      </table>
+    </div>`);
+
+    /* --- 3. 安定計算（詳細） --- */
+    sheets.push(stabilityDetailSheets(R, G));
+
+    /* --- 4. 断面計算（詳細） --- */
+    sheets.push(sectionDetailSheet(R, G));
+
+    $("#report").innerHTML = sheets.join("");
+  }
+
+  function stabilityDetailSheets(R, G) {
+    const body = ParapetCalc.polyAreaCentroid(G.bodyPts);
+    const foot = ParapetCalc.polyAreaCentroid(G.footPts);
+    const bs = ParapetCalc.polyAreaCentroid(G.backSoilPts);
+    return `<div class="sheet">
+      <h2>3. 安定計算</h2>
+      <h3>3.1 形状諸量（体積・図心, 単位奥行1m）</h3>
+      <table class="rep">
+        <thead><tr><th>区分</th><th>断面積 A(m²)</th><th>図心 X(m)</th><th>図心 Y(m)</th></tr></thead>
+        <tbody>
+          <tr><td>本体</td><td>${f3(body.area)}</td><td>${f3(body.cx)}</td><td>${f3(body.cy)}</td></tr>
+          <tr><td>フーチング</td><td>${f3(foot.area)}</td><td>${f3(foot.cx)}</td><td>${f3(foot.cy)}</td></tr>
+          <tr><td>背面土砂</td><td>${f3(bs.area)}</td><td>${f3(bs.cx)}</td><td>${f3(bs.cy)}</td></tr>
+        </tbody>
+      </table>
+
+      <h3>3.2 土圧（試行くさび法）</h3>
+      <p class="formula">P = W·sin(ω−φ) / cos(ω−φ−α−δ＋θ)　（θ:地震合震度角, δ:壁面摩擦角）</p>
+      <table class="rep">
+        <thead><tr><th>荷重状態</th><th>すべり角 ω(度)</th><th>δ(度)</th><th>P(kN)</th><th>Ph(kN)</th><th>Pv(kN)</th><th>作用高 y(m)</th></tr></thead>
+        <tbody>${R.stability.map((s) => `<tr>
+          <td>${esc(s.name)}</td><td>${f2(s.ep.omega)}</td><td>${f3(s.ep.delta)}</td>
+          <td>${f3(s.ep.P)}</td><td>${f3(s.ep.Ph)}</td><td>${f3(s.ep.Pv)}</td><td>${f3(s.ep.y)}</td></tr>`).join("")}</tbody>
+      </table>
+
+      <h3>3.3 作用力の集計（フーチング前面まわり）</h3>
+      <table class="rep">
+        <thead><tr><th>荷重状態</th><th>ΣV(kN)</th><th>ΣH(kN)</th><th>抵抗M Mr(kN·m)</th><th>転倒M Mt(kN·m)</th></tr></thead>
+        <tbody>${R.stability.map((s) => `<tr>
+          <td>${esc(s.name)}</td><td>${f3(s.V)}</td><td>${f3(s.H)}</td><td>${f3(s.Mr)}</td><td>${f3(s.Mt)}</td></tr>`).join("")}</tbody>
+      </table>
+
+      <h3>3.4 安定照査</h3>
+      <p class="formula">転倒: d=(ΣMr−ΣMt)/ΣV, e=B/2−d ≦ ea=B·(ea/B)</p>
+      <p class="formula">滑動: Fs=(ΣV·μ＋CB·B′)/ΣH ≧ Fsa　（B′=B−2|e|）</p>
+      <p class="formula">支持: |e|≦B/6 → q=ΣV/B·(1±6e/B) ／ |e|&gt;B/6 → qmax=2ΣV/{3(B/2−|e|)}</p>
+      <table class="rep">
+        <thead><tr><th>荷重状態</th><th>d(m)</th><th>e(m)</th><th>判定(転倒)</th><th>Fs</th><th>判定(滑動)</th><th>qmax</th><th>判定(支持)</th></tr></thead>
+        <tbody>${R.stability.map((s) => `<tr>
+          <td>${esc(s.name)}</td><td>${f3(s.d)}</td><td>${f3(s.e)}</td><td>${judge(s.overturnOK)}</td>
+          <td>${f3(s.Fs)}</td><td>${judge(s.FsOK)}</td>
+          <td>${f3(s.qmax)}</td><td>${judge(s.bearingOK)}</td></tr>`).join("")}</tbody>
+      </table>
+    </div>`;
+  }
+
+  function sectionDetailSheet(R, G) {
+    return `<div class="sheet">
+      <h2>4. 断面計算（重力式・無筋）</h2>
+      <p>照査位置: 壁基部（フーチング上面）水平断面　断面幅 b=${f3(G.bBottom)} m</p>
+      <p class="formula">σ = N/A ± M/Z　（A=b·1.0, Z=1.0·b²/6）</p>
+      <h3>4.1 断面力</h3>
+      <table class="rep">
+        <thead><tr><th>荷重状態</th><th>N(kN)</th><th>H(kN)</th><th>M(kN·m)</th><th>偏心 e(m)</th></tr></thead>
+        <tbody>${R.section.map((s) => `<tr>
+          <td>${esc(s.name)}</td><td>${f3(s.N)}</td><td>${f3(s.H)}</td><td>${f3(s.M)}</td><td>${f3(s.e)}</td></tr>`).join("")}</tbody>
+      </table>
+      <h3>4.2 応力度照査</h3>
+      <table class="rep">
+        <thead><tr><th>荷重状態</th><th>σc(N/mm²)</th><th>許容σca</th><th>σ背面(N/mm²)</th><th>引張σt</th><th>許容σta</th><th>τ(N/mm²)</th><th>許容τa</th><th>判定</th></tr></thead>
+        <tbody>${R.section.map((s) => `<tr>
+          <td>${esc(s.name)}</td>
+          <td>${f3(s.sigmaC)}</td><td>≦${f3(s.sigmaCa)}</td>
+          <td>${f3(s.sigmaT)}</td><td>${f3(s.tension)}</td><td>≦${f3(s.sigmaTa)}</td>
+          <td>${f3(s.tau)}</td><td>≦${f3(s.tauA)}</td>
+          <td>${judge(s.compOK && s.tensionOK && s.shearOK)}</td></tr>`).join("")}</tbody>
+      </table>
+      <p class="note">※ 重力式擁壁は原則として断面に引張応力を生じさせない設計とする。σ背面が負の場合は引張応力(σt)を許容引張応力度σtaと照査。</p>
+    </div>`;
+  }
+
+  function esc(s) { return String(s ?? "").replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c])); }
+
+  /* ========================================================
+   * ツールバー
+   * ====================================================== */
+  function initToolbar() {
+    $("#btnCalc").onclick = runCalc;
+    $("#btnPrint").onclick = () => window.print();
+    $("#btnReset").onclick = () => { I = deepClone(window.DEFAULT_INPUT); rebuild(); };
+    $("#btnSave").onclick = () => {
+      const blob = new Blob([JSON.stringify(I, null, 2)], { type: "application/json" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = (I.project.title || "parapet") + ".json";
+      a.click();
+      localStorage.setItem(LS_KEY, JSON.stringify(I));
+    };
+    $("#btnLoad").onclick = () => $("#fileLoad").click();
+    $("#fileLoad").onchange = (e) => {
+      const file = e.target.files[0]; if (!file) return;
+      const rd = new FileReader();
+      rd.onload = () => { try { I = JSON.parse(rd.result); rebuild(); } catch (err) { alert("読込エラー: " + err.message); } };
+      rd.readAsText(file);
+    };
+    $$(".tab").forEach((t) => t.onclick = () => {
+      $$(".tab").forEach((x) => x.classList.remove("active"));
+      $$(".tabpane").forEach((x) => x.classList.remove("active"));
+      t.classList.add("active");
+      $("#" + t.dataset.tab).classList.add("active");
+    });
+  }
+
+  function rebuild() {
+    buildCond(); buildShape(); buildLoad(); runCalc();
+  }
+
+  /* ---------- 起動 ---------- */
+  function init() {
+    const saved = localStorage.getItem(LS_KEY);
+    if (saved) { try { I = JSON.parse(saved); } catch (e) {} }
+    initToolbar();
+    bindInputs();
+    rebuild();
+  }
+  document.addEventListener("DOMContentLoaded", init);
+})();
+  </script>
+</body>
+</html>
